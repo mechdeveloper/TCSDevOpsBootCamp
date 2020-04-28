@@ -15,4 +15,9 @@ public class MessageService {
 	public String welcomeGuest() {
 		return "Welcome to DevOps";
 	}
+	
+	@GetMapping("/greet")
+	public String greetGuest() {
+		return "Hello, How was your day !";
+	}
 }

@@ -26,4 +26,11 @@ public class TestMessageService {
 		Assertions.assertEquals(ms.welcomeGuest(), "Welcome to DevOps");
 	}
 	
+	@Test
+	public void testGreet() {
+		MessageService ms = new MessageService();
+		System.out.println("testGreet");
+		Assertions.assertEquals(ms.greetGuest(), "Hello, How was your day !");
+	}
+	
 }
