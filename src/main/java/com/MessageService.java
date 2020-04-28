@@ -10,4 +10,9 @@ public class MessageService {
 	public String sayHello() {
 		return "hello";
 	}
+	
+	@GetMapping("/welcome")
+	public String welcomeGuest() {
+		return "Welcome to DevOps";
+	}
 }

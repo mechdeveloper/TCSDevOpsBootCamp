@@ -1,3 +1,5 @@
+package com;
+
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -13,8 +15,15 @@ public class TestMessageService {
 	@Test
 	public void testMessage() {
 		MessageService ms = new MessageService();
-		System.out.println("hello");
+		System.out.println("testMessage");
 		Assertions.assertEquals(ms.sayHello(), "hello");
+	}
+	
+	@Test
+	public void testWelcome() {
+		MessageService ms = new MessageService();
+		System.out.println("testWelcome");
+		Assertions.assertEquals(ms.welcomeGuest(), "Welcome to DevOps");
 	}
 	
 }
