@@ -23,11 +23,41 @@ node{
         }
         sh 'docker push ashishbagheldocker/cicd:2.0'
     }
-    stage('Pull Image') {
-        sh 'docker pull ashishbagheldocker/cicd:2.0'
+
+    // Run Ansible task here 
+    // Requires Ansible Jenkins Plugin
+    stage ('Create EC2 Instance'){
+        ansiblePlaybook 
     }
-    stage('Run Container') {
-        sh 'docker run -d -p 8888:8888 ashishbagheldocker/cicd:2.0'
+    
+    
+    // Get IP Address of EC2 Instance
+    // Requires AWS CLI
+    //stage ('fecth EC2 IP Address') {
+        def command = 'aws ec2 describe '
+        def output = sh script : "${command}", returnStdout:true
+        def myIp = output.split('"')
+        def ipAddress = myIp[1]
+        print ipAddress
+    //}
+    
+    // Requires SSH Agent Jenkins plugin
+    stage('Installing Docker on EC2'){
+        def dockerCMD = "sudo yum install docker -y"
+        sshagent(['aws-dev-server']){
+            sh "ssh -o StrictHostKeyChecking=no ec2-user@${ipAddress} ${dockerCMD}"
+        }
+    }
+    
+    stage('starting docker engine service on EC2 Instance'){
+        def dockerCMD = "sudo service docker start"
+                sshagent(['aws-dev-server']){
+            sh "ssh -o StrictHostKeyChecking=no ec2-user@${ipAddress} ${dockerCMD}"
+        }
+    }
+    
+    stage('Run the docker Image'){
+        def dockerCMD = "sudo docker run --name=myapp -p 80:8888 ashishbagheldocker/cicd:2.0"
     }
     
 }
