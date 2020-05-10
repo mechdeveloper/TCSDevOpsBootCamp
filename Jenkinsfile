@@ -1,8 +1,6 @@
 
 node {
   try {
-    /* ... existing build steps ... */
-    
     stage('git checkout'){
         git credentialsId: 'git-creds', url: 'https://github.com/mechdeveloper/TCSDevOpsBootCamp.git'
     }
@@ -40,7 +38,7 @@ node {
             sh "docker run --rm -v \$(pwd):/ansible/playbooks --env AWS_ACCESS_KEY_ID=\${AWS_ACCESS_KEY_ID} --env AWS_SECRET_ACCESS_KEY=\${AWS_SECRET_ACCESS_KEY}  ashishbagheldocker/my-ansible:ubuntu-18.04 -c '${ansibleCMD}'"
         }
     }
-    
+
 // Get IP Address of running instance
 def output = ""
 withCredentials([string(credentialsId: 'AWS_ACCESS_KEY_ID', variable: 'AWS_ACCESS_KEY_ID'), string(credentialsId: 'AWS_SECRET_ACCESS_KEY', variable: 'AWS_SECRET_ACCESS_KEY')]) {
@@ -67,13 +65,40 @@ print ipAddress
         }
     }
     
+    // Check if swarm mode active 
+    def isSwarm = ""
+    sshagent(['devops-ec2-key']) {
+        def swarmCheck = "sudo docker info | grep Swarm | sed 's/Swarm: //g'"
+        isSwarm = sh script : "ssh -o StrictHostKeyChecking=no ec2-user@${ipAddress} ${swarmCheck}", returnStdout:true
+    }
+    print isSwarm
+
+
+    stage('Initialize docker swarm on EC2 Instance'){
+        if (isSwarm == 'inactive') {
+            def dockerCMD = "sudo docker swarm init"
+            sshagent(['devops-ec2-key']) {
+                sh "ssh -o StrictHostKeyChecking=no ec2-user@${ipAddress} ${dockerCMD}"
+            }
+        }
+    }
+    
+    stage('Copy docker-compose.yml to EC2 Instance'){
+        def copyCMD = "scp -o StrictHostKeyChecking=no docker-compose.yml ec2-user@{ipAddress}"
+        sshagent(['devops-ec2-key']) {
+            sh "${copyCMD}"
+        }
+    }
+    
     stage('Run the docker image in EC2 Instance'){
-        def dockerCMD = "sudo docker run --name=myapp -p 80:8885 ashishbagheldocker/devops-e2-casestudy:${env.BUILD_ID}"
+        // def dockerCMD = "sudo docker run -d --name=myapp -p 80:8885 ashishbagheldocker/devops-e2-casestudy:${env.BUILD_ID}"
+        def IMAGE_NAME = "ashishbagheldocker/devops-e2-casestudy:${env.BUILD_ID}"
+        def dockerCMD = "sudo env IMAGE_NAME=${IMAGE_NAME} docker stack deploy -c docker-compose.yml mystack"
         sshagent(['devops-ec2-key']) {
             sh "ssh -o StrictHostKeyChecking=no ec2-user@${ipAddress} ${dockerCMD}"
         }
     }
-    
+ 
   } catch (e) {
      currentBuild.result = "FAILED"
      notifyFailed()
