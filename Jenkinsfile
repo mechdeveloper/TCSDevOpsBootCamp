@@ -2,6 +2,7 @@
 node {
   try {
     /* ... existing build steps ... */
+    
     stage('git checkout'){
         git credentialsId: 'git-creds', url: 'https://github.com/mechdeveloper/TCSDevOpsBootCamp.git'
     }
@@ -39,11 +40,11 @@ node {
             sh "docker run --rm -v \$(pwd):/ansible/playbooks --env AWS_ACCESS_KEY_ID=\${AWS_ACCESS_KEY_ID} --env AWS_SECRET_ACCESS_KEY=\${AWS_SECRET_ACCESS_KEY}  ashishbagheldocker/my-ansible:ubuntu-18.04 -c '${ansibleCMD}'"
         }
     }
-
+    
 // Get IP Address of running instance
 def output = ""
 withCredentials([string(credentialsId: 'AWS_ACCESS_KEY_ID', variable: 'AWS_ACCESS_KEY_ID'), string(credentialsId: 'AWS_SECRET_ACCESS_KEY', variable: 'AWS_SECRET_ACCESS_KEY')]) {
-  def awsclicmd = "aws ec2 describe-instances --region us-east-2 --query 'Reservations[].Instances[].PrivateIpAddress'"
+  def awsclicmd = "aws ec2 describe-instances --region us-east-2 --query 'Reservations[].Instances[].PublicIpAddress'"
   def command = "docker run --rm --env AWS_ACCESS_KEY_ID=\${AWS_ACCESS_KEY_ID} --env AWS_SECRET_ACCESS_KEY=\${AWS_SECRET_ACCESS_KEY} ashishbagheldocker/my-ansible:ubuntu-18.04 -c '${awsclicmd}'"
   output = sh script : "${command}", returnStdout:true
 }
@@ -55,21 +56,21 @@ print ipAddress
     // Requires SSH Agent Jenkins plugin
     stage('Installing Docker on EC2'){
         def dockerCMD = "sudo yum install docker -y"
-        sshagent(['']){
-            sh "ssh -i private.pem -o StrictHostKeyChecking=no ec2-user@${ipAddress} ${dockerCMD}"
+        sshagent(['devops-ec2-key']) {
+            sh "ssh -o StrictHostKeyChecking=no ec2-user@${ipAddress} ${dockerCMD}"
         }
     }
     stage('starting docker engine service on EC2 Instance'){
         def dockerCMD = "sudo service docker start"
-        sshagent(['']){
-            sh "ssh -i private.pem -o StrictHostKeyChecking=no ec2-user@${ipAddress} ${dockerCMD}"
+        sshagent(['devops-ec2-key']) {
+            sh "ssh -o StrictHostKeyChecking=no ec2-user@${ipAddress} ${dockerCMD}"
         }
     }
     
     stage('Run the docker image in EC2 Instance'){
         def dockerCMD = "sudo docker run --name=myapp -p 80:8885 ashishbagheldocker/devops-e2-casestudy:${env.BUILD_ID}"
-        sshagent(['']){
-            sh "ssh -i private.pem -o StrictHostKeyChecking=no ec2-user@${ipAddress} ${dockerCMD}"
+        sshagent(['devops-ec2-key']) {
+            sh "ssh -o StrictHostKeyChecking=no ec2-user@${ipAddress} ${dockerCMD}"
         }
     }
     

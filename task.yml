@@ -36,22 +36,6 @@
         - proto: all
           cidr_ip: 0.0.0.0/0
 
-  - name: Create a new EC2 key
-    ec2_key:
-        name: devops-ec2-key
-        region: us-east-2
-    register: ec2_key
-
-  - debug:
-      var: ec2_key.key.privatekey
-
-  - name: Save private key
-    copy: 
-      content: "{{ ec2_key.key.private_key }}"
-      dest: "./private.pem" 
-      mode: 0600
-    when: ec2_key.changed
-
   - name: launching AWS EC2 instance using Ansible
     ec2 :
       key_name: devops-ec2-key
@@ -75,16 +59,5 @@
         owner: ashish
     register: ec2_out
 
-  - debug:
-      var: ec2_out
-  - debug:
-      msg: "{{ ec2_out.tagged_instances }}"
-  - debug:
-      msg: "{{ ec2_out.tagged_instances[0].public_dns_name }}"
-
   - name: Wait for SSH to come up
     wait_for: host="{{ ec2_out.tagged_instances[0].public_dns_name }}" port=22 delay=10  timeout=300
-    register: ssh_out
-
-  - debug:
-      var: ssh_out
