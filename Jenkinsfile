@@ -13,7 +13,7 @@ node{
        def mavenHome = tool name: 'maven3', type: 'maven'
        def mavenCMD = "${mavenHome}/bin/mvn"
        sh "${mavenCMD} package"
-    }
+    }8
     stage('build docker image'){
        sh 'docker build -t ashishbagheldocker/cicd:2.0 .'
     }

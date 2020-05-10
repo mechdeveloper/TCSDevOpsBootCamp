@@ -1,15 +1,90 @@
-- name : ec2-launcher
-  hosts : localhost
+## Ansible Playbook
+# 1) Creates a custom security group
+# 2) Creates a new EC2 Instance
+# 3) Waits for ssh to become active on Instance 
+#
+# Version 1.0    Ashish Singh Baghel    May/07/2020
+#
+- name: ec2-launcher
+  hosts: localhost
+  gather_facts: false
   connection : local
-  tasks :
-  - name : launch ec2
-    ec2 : 
-     instance_type : t2.micro
-     key_name : devops-ec2
-     image : ami-097834fcb3081f51a
-     region : us-east-2
-     group : launch-wizard-1
-     count : 1
-     vpc_subnet_id : subnet-9f5562e5
-     wait : yes
-     assign_public_ip : yes
+  
+  vars:
+    region: us-east-2
+    instance_type: t2.micro
+    ami: ami-097834fcb3081f51a
+    key_name: devops-ec2-key
+    env: test
+
+  tasks:
+  - name: Setting up Security/Firewall Group
+    ec2_group:
+      name: default_linux_ec2
+      description: Rules Allowing Traffic on port 22 and 80
+      region: us-east-2
+      rules:
+        - proto: tcp
+          from_port: 80
+          to_port: 80
+          cidr_ip: 0.0.0.0/0
+        - proto: tcp
+          from_port: 22
+          to_port: 22
+          cidr_ip: 0.0.0.0/0
+      rules_egress:
+        - proto: all
+          cidr_ip: 0.0.0.0/0
+
+  - name: Create a new EC2 key
+    ec2_key:
+        name: devops-ec2-key
+        region: us-east-2
+    register: ec2_key
+
+  - debug:
+      var: ec2_key.key.privatekey
+
+  - name: Save private key
+    copy: 
+      content: "{{ ec2_key.key.private_key }}"
+      dest: "./private.pem" 
+      mode: 0600
+    when: ec2_key.changed
+
+  - name: launching AWS EC2 instance using Ansible
+    ec2 :
+      key_name: devops-ec2-key
+      instance_type: t2.micro
+      image: ami-097834fcb3081f51a
+      region: us-east-2
+      wait: yes
+      wait_timeout: 500
+      group: default_linux_ec2
+      instance_tags:
+        name: cicd-devops
+        owner: ashish
+        env: "{{ env }}"
+      monitoring: no
+      vpc_subnet_id: subnet-0dc43741
+      assign_public_ip: yes
+      exact_count: 1
+      count_tag:
+        name: cicd-devops
+        env: "{{ env }}"
+        owner: ashish
+    register: ec2_out
+
+  - debug:
+      var: ec2_out
+  - debug:
+      msg: "{{ ec2_out.tagged_instances }}"
+  - debug:
+      msg: "{{ ec2_out.tagged_instances[0].public_dns_name }}"
+
+  - name: Wait for SSH to come up
+    wait_for: host="{{ ec2_out.tagged_instances[0].public_dns_name }}" port=22 delay=10  timeout=300
+    register: ssh_out
+
+  - debug:
+      var: ssh_out
