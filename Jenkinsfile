@@ -23,13 +23,16 @@ node {
         }
     }
 	stage('build docker image'){
-       sh "docker build -t ashishbagheldocker/devops-e2-casestudy:${env.BUILD_ID} ."
+	    withCredentials([usernamePassword(credentialsId: 'docker-creds', passwordVariable: 'dockerHubPwd', usernameVariable: 'dokcerHubUser')]) {
+            sh "docker build -t ${dokcerHubUser}/devops-e2-casestudy:${env.BUILD_ID} ."
+        }
     }
     stage('push docker image to dockerhub') {
-        withCredentials([string(credentialsId: 'docker-password', variable: 'dockerHubPwd')]){
-            sh "docker login -u ashishbagheldocker -p ${dockerHubPwd}"
+        withCredentials([usernamePassword(credentialsId: 'docker-creds', passwordVariable: 'dockerHubPwd', usernameVariable: 'dokcerHubUser')]) {
+            sh "docker login -u ${dokcerHubUser} -p ${dockerHubPwd}"
+            sh "docker push ${dokcerHubUser}/devops-e2-casestudy:${env.BUILD_ID}"
         }
-        sh "docker push ashishbagheldocker/devops-e2-casestudy:${env.BUILD_ID}"
+        
     }
 
     // Run Ansible playbook here
@@ -94,11 +97,14 @@ print ipAddress
     }
     
     stage('Run the docker image in EC2 Instance'){
-        // def dockerCMD = "sudo docker run -d --name=myapp -p 80:8885 ashishbagheldocker/devops-e2-casestudy:${env.BUILD_ID}"
-        def IMAGE_NAME = "ashishbagheldocker/devops-e2-casestudy:${env.BUILD_ID}"
-        def dockerCMD = "sudo env IMAGE_NAME=${IMAGE_NAME} docker stack deploy -c docker-compose.yml mystack"
-        sshagent(['devops-ec2-key']) {
-            sh "ssh -o StrictHostKeyChecking=no ec2-user@${ipAddress} ${dockerCMD}"
+        
+        withCredentials([usernamePassword(credentialsId: 'docker-creds', passwordVariable: 'dockerHubPwd', usernameVariable: 'dokcerHubUser')]) {
+            // def dockerCMD = "sudo docker run -d --name=myapp -p 80:8885 ashishbagheldocker/devops-e2-casestudy:${env.BUILD_ID}"
+            def IMAGE_NAME = "${dokcerHubUser}/devops-e2-casestudy:${env.BUILD_ID}"
+            def dockerCMD = "sudo env IMAGE_NAME=${IMAGE_NAME} docker stack deploy -c docker-compose.yml mystack"
+            sshagent(['devops-ec2-key']) {
+                sh "ssh -o StrictHostKeyChecking=no ec2-user@${ipAddress} ${dockerCMD}"
+            }
         }
     }
     
