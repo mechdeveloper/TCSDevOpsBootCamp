@@ -88,9 +88,8 @@ print ipAddress
     }
     
     stage('Copy docker-compose.yml to EC2 Instance'){
-        def copyCMD = "scp -o StrictHostKeyChecking=no docker-compose.yml ec2-user@{ipAddress}"
         sshagent(['devops-ec2-key']) {
-            sh "${copyCMD}"
+            sh "scp -o StrictHostKeyChecking=no docker-compose.yml ec2-user@${ipAddress}:"
         }
     }
     
