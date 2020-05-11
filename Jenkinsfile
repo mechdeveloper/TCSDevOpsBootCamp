@@ -43,17 +43,17 @@ node {
         }
     }
 
-// Get IP Address of running instance
-def output = ""
-withCredentials([string(credentialsId: 'AWS_ACCESS_KEY_ID', variable: 'AWS_ACCESS_KEY_ID'), string(credentialsId: 'AWS_SECRET_ACCESS_KEY', variable: 'AWS_SECRET_ACCESS_KEY')]) {
-  def awsclicmd = "aws ec2 describe-instances --region us-east-2 --query 'Reservations[].Instances[].PublicIpAddress'"
-  def command = "docker run --rm --env AWS_ACCESS_KEY_ID=\${AWS_ACCESS_KEY_ID} --env AWS_SECRET_ACCESS_KEY=\${AWS_SECRET_ACCESS_KEY} ashishbagheldocker/my-ansible:ubuntu-18.04 -c '${awsclicmd}'"
-  output = sh script : "${command}", returnStdout:true
-}
-print output
-def myIp = output.split('"')
-def ipAddress = myIp[1]
-print ipAddress
+    // Get IP Address of running instance
+    def output = ""
+    withCredentials([string(credentialsId: 'AWS_ACCESS_KEY_ID', variable: 'AWS_ACCESS_KEY_ID'), string(credentialsId: 'AWS_SECRET_ACCESS_KEY', variable: 'AWS_SECRET_ACCESS_KEY')]) {
+    def awsclicmd = "aws ec2 describe-instances --region us-east-2 --query 'Reservations[].Instances[].PublicIpAddress'"
+    def command = "docker run --rm --env AWS_ACCESS_KEY_ID=\${AWS_ACCESS_KEY_ID} --env AWS_SECRET_ACCESS_KEY=\${AWS_SECRET_ACCESS_KEY} ashishbagheldocker/my-ansible:ubuntu-18.04 -c '${awsclicmd}'"
+    output = sh script : "${command}", returnStdout:true
+    }
+    print output
+    def myIp = output.split('"')
+    def ipAddress = myIp[1]
+    print ipAddress
 
     // Requires SSH Agent Jenkins plugin
     stage('Installing Docker on EC2'){
@@ -109,6 +109,7 @@ print ipAddress
     }
     
   } catch (e) {
+    /* ... Catches exceptions and triggers the email notification for failed builds ... */
      currentBuild.result = "FAILED"
      notifyFailed()
      throw e
