@@ -4,7 +4,7 @@ FROM openjdk:8-jdk-alpine
 
 VOLUME /tmp
 
-EXPOSE 8888
+EXPOSE 8885
 
 ARG JAR_FILE=/target/*.jar
 

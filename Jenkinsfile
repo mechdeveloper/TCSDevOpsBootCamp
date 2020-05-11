@@ -1,6 +1,7 @@
 
 node {
   try {
+      
     stage('git checkout'){
         git credentialsId: 'git-creds', url: 'https://github.com/mechdeveloper/TCSDevOpsBootCamp.git'
     }
@@ -72,15 +73,18 @@ print ipAddress
         isSwarm = sh script : "ssh -o StrictHostKeyChecking=no ec2-user@${ipAddress} ${swarmCheck}", returnStdout:true
     }
     print isSwarm
+    print isSwarm.trim();
 
-
-    stage('Initialize docker swarm on EC2 Instance'){
-        if (isSwarm == 'inactive') {
+    if (isSwarm.trim() == 'inactive') {
+        echo "ec2 swarm inactive"
+        stage('Initialize docker swarm on EC2 Instance'){
             def dockerCMD = "sudo docker swarm init"
             sshagent(['devops-ec2-key']) {
-                sh "ssh -o StrictHostKeyChecking=no ec2-user@${ipAddress} ${dockerCMD}"
+               sh "ssh -o StrictHostKeyChecking=no ec2-user@${ipAddress} ${dockerCMD}"
             }
         }
+    }else{
+        echo "ec2 swarm active"
     }
     
     stage('Copy docker-compose.yml to EC2 Instance'){
@@ -98,7 +102,7 @@ print ipAddress
             sh "ssh -o StrictHostKeyChecking=no ec2-user@${ipAddress} ${dockerCMD}"
         }
     }
- 
+    
   } catch (e) {
      currentBuild.result = "FAILED"
      notifyFailed()
